@@ -72,32 +72,28 @@ export interface Coupon {
   active: boolean;
 }
 
-// In-Memory Storage for server-side fallback, and LocalStorage for client-side fallback
+// In-Memory Storage / Local fallback for development when Supabase is not configured
 let localProducts: Product[] = [];
 let localReviews: Review[] = [];
 let localOrders: Order[] = [];
 let localCoupons: Coupon[] = [];
 let localVisits: { date: string; count: number }[] = [];
 
-// Helper to normalize product from seed format or raw format
+// Helper to normalize product
 function normalizeProduct(raw: any, index: number = 0): Product {
   const category = raw.category || 'jeans';
   const sizes = raw.sizes || (category === 'jeans' ? ['38', '40', '42', '44', '46'] : ['S', 'M', 'L', 'XL']);
   
-  // Stock normalization: convert simple number to structured object mapping size -> stock
   let sizeStock: Record<string, number> = {};
   if (typeof raw.stock === 'object' && raw.stock !== null) {
     sizeStock = raw.stock;
   } else {
-    // If stock is a number, distribute it among sizes
     const stockVal = typeof raw.stock === 'number' ? raw.stock : 10;
     sizes.forEach((s: string, idx: number) => {
-      // Deterministic but distributed
       sizeStock[s] = idx === 0 ? Math.max(1, stockVal - 2) : Math.max(0, Math.floor(stockVal / sizes.length));
     });
   }
 
-  // Generate deterministic SKU if not present
   const sku = raw.sku || `GST-${category.slice(0, 3).toUpperCase()}-${String(raw.numericId || index + 1).padStart(3, '0')}`;
 
   return {
@@ -126,84 +122,24 @@ function normalizeProduct(raw: any, index: number = 0): Product {
     isSale: !!raw.isSale,
     isBestSeller: !!raw.isBestSeller,
     sku: sku,
-    createdAt: raw.createdAt || new Date(Date.now() - index * 24 * 60 * 60 * 1000).toISOString() // offset creation dates
+    createdAt: raw.createdAt || new Date(Date.now() - index * 24 * 60 * 60 * 1000).toISOString()
   };
 }
 
-// Initialize seed data
-function initializeLocalStorage() {
-  if (typeof window === 'undefined') {
-    // Initialize in-memory
-    if (localProducts.length === 0 && Array.isArray(seedProducts)) {
-      localProducts = seedProducts.map((p: any, idx: number) => normalizeProduct(p, idx));
-      localCoupons = [
-        { code: 'GOOD10', discountPercentage: 10, active: true },
-        { code: 'STREET15', discountPercentage: 15, active: true },
-        { code: 'BIENVENIDA20', discountPercentage: 20, active: true }
-      ];
-      // Generate some dummy visits
-      const today = new Date();
-      for (let i = 30; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
-        localVisits.push({
-          date: dateStr,
-          count: 50 + Math.floor(Math.random() * 150)
-        });
-      }
-    }
-    return;
-  }
-
-  // Client-side LocalStorage checks
-  const storedProd = localStorage.getItem('good_style_products');
-  if (storedProd) {
-    try {
-      localProducts = JSON.parse(storedProd);
-    } catch (e) {
-      localProducts = [];
-    }
-  } else if (Array.isArray(seedProducts)) {
+// Initialize seed data for fallback
+function initializeFallbackData() {
+  if (localProducts.length === 0 && Array.isArray(seedProducts)) {
     localProducts = seedProducts.map((p: any, idx: number) => normalizeProduct(p, idx));
-    localStorage.setItem('good_style_products', JSON.stringify(localProducts));
-  }
-
-  const storedRev = localStorage.getItem('good_style_reviews');
-  if (storedRev) {
-    try { localReviews = JSON.parse(storedRev); } catch(e) {}
-  } else {
-    localReviews = [
-      { id: "rev-1", productId: "aimen-100-ml", author: "Mateo R.", location: "Palermo, CABA", rating: 5, date: "2026-05-12", comment: "Excelente fragancia, muy persistente. Recibí muchos elogios.", verified: true },
-      { id: "rev-2", productId: "baggy-black", author: "Sofía G.", location: "Rosario, Santa Fe", rating: 5, date: "2026-06-01", comment: "El denim rígido de este baggy black es espectacular. La horma calza perfecto.", verified: true },
-      { id: "rev-3", productId: "boxy-2023", author: "Federico L.", location: "Córdoba Capital", rating: 4, date: "2026-05-28", comment: "El algodón es súper pesado y grueso, calce boxy ideal.", verified: true }
-    ];
-    localStorage.setItem('good_style_reviews', JSON.stringify(localReviews));
-  }
-
-  const storedOrd = localStorage.getItem('good_style_orders');
-  if (storedOrd) {
-    try { localOrders = JSON.parse(storedOrd); } catch(e) {}
-  } else {
-    localOrders = [];
-  }
-
-  const storedCoup = localStorage.getItem('good_style_coupons');
-  if (storedCoup) {
-    try { localCoupons = JSON.parse(storedCoup); } catch(e) {}
-  } else {
     localCoupons = [
       { code: 'GOOD10', discountPercentage: 10, active: true },
       { code: 'STREET15', discountPercentage: 15, active: true },
       { code: 'BIENVENIDA20', discountPercentage: 20, active: true }
     ];
-    localStorage.setItem('good_style_coupons', JSON.stringify(localCoupons));
-  }
-
-  const storedVis = localStorage.getItem('good_style_visits');
-  if (storedVis) {
-    try { localVisits = JSON.parse(storedVis); } catch(e) {}
-  } else {
+    localReviews = [
+      { id: "rev-1", productId: "aimen-100-ml", author: "Mateo R.", location: "Palermo, CABA", rating: 5, date: "2026-05-12", comment: "Excelente fragancia, muy persistente. Recibí muchos elogios.", verified: true },
+      { id: "rev-2", productId: "baggy-black", author: "Sofía G.", location: "Rosario, Santa Fe", rating: 5, date: "2026-06-01", comment: "El denim rígido de este baggy black es espectacular. La horma calza perfecto.", verified: true },
+      { id: "rev-3", productId: "boxy-2023", author: "Federico L.", location: "Córdoba Capital", rating: 4, date: "2026-05-28", comment: "El algodón es súper pesado y grueso, calce boxy ideal.", verified: true }
+    ];
     const today = new Date();
     for (let i = 30; i >= 0; i--) {
       const d = new Date(today);
@@ -214,46 +150,41 @@ function initializeLocalStorage() {
         count: 50 + Math.floor(Math.random() * 150)
       });
     }
-    localStorage.setItem('good_style_visits', JSON.stringify(localVisits));
   }
 }
 
-// Perform initialization
-initializeLocalStorage();
+// Perform fallback initialization
+initializeFallbackData();
 
-const saveStateToStorage = (key: string, data: any) => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(key, JSON.stringify(data));
-  }
-};
-
-// --- DATA ACCESS METHODS ---
+// --- DATA ACCESS METHODS (DIRECT SUPABASE OPERATION WITH NO LOCALSTORAGE FALLBACK) ---
 
 export async function getProducts(): Promise<Product[]> {
-  initializeLocalStorage();
   if (supabase) {
     const { data, error } = await supabase.from('products').select('*');
-    if (!error && data && data.length > 0) {
-      return data;
+    if (error) {
+      console.error("Error fetching products from Supabase:", error);
+      throw error;
     }
+    return data || [];
   }
   return localProducts;
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
-  initializeLocalStorage();
   if (supabase) {
-    const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
-    if (!error && data) return data;
+    const { data, error } = await supabase.from('products').select('*').eq('id', id).maybeSingle();
+    if (error) {
+      console.error("Error fetching product by ID from Supabase:", error);
+      throw error;
+    }
+    return data;
   }
   const prod = localProducts.find(p => p.id === id || p.slug === id);
   return prod || null;
 }
 
 export async function saveProduct(product: Omit<Product, 'numericId' | 'createdAt'> & { numericId?: number; createdAt?: string }): Promise<Product> {
-  initializeLocalStorage();
   const index = localProducts.findIndex(p => p.id === product.id);
-  
   const finalProduct: Product = {
     ...normalizeProduct(product, index >= 0 ? index : localProducts.length),
     numericId: product.numericId || (index >= 0 ? localProducts[index].numericId : localProducts.length + 1),
@@ -262,42 +193,51 @@ export async function saveProduct(product: Omit<Product, 'numericId' | 'createdA
 
   if (supabase) {
     const { error } = await supabase.from('products').upsert(finalProduct);
-    if (!error) return finalProduct;
+    if (error) {
+      console.error("Error saving product to Supabase:", error);
+      throw error;
+    }
+    return finalProduct;
   }
 
+  // Fallback (for local development only if Supabase not configured)
   if (index >= 0) {
     localProducts[index] = finalProduct;
   } else {
     localProducts.unshift(finalProduct);
   }
-  saveStateToStorage('good_style_products', localProducts);
   return finalProduct;
 }
 
 export async function deleteProduct(id: string): Promise<boolean> {
-  initializeLocalStorage();
   if (supabase) {
     const { error } = await supabase.from('products').delete().eq('id', id);
-    if (!error) return true;
+    if (error) {
+      console.error("Error deleting product from Supabase:", error);
+      throw error;
+    }
+    return true;
   }
   const index = localProducts.findIndex(p => p.id === id);
   if (index >= 0) {
     localProducts.splice(index, 1);
-    saveStateToStorage('good_style_products', localProducts);
     return true;
   }
   return false;
 }
 
 export async function getReviews(productId?: string): Promise<Review[]> {
-  initializeLocalStorage();
   if (supabase) {
     let query = supabase.from('reviews').select('*');
     if (productId) {
       query = query.eq('productId', productId);
     }
     const { data, error } = await query;
-    if (!error && data) return data;
+    if (error) {
+      console.error("Error getting reviews from Supabase:", error);
+      throw error;
+    }
+    return data || [];
   }
   if (productId) {
     return localReviews.filter(r => r.productId === productId);
@@ -306,7 +246,6 @@ export async function getReviews(productId?: string): Promise<Review[]> {
 }
 
 export async function addReview(review: Omit<Review, 'id' | 'date'>): Promise<Review> {
-  initializeLocalStorage();
   const newReview: Review = {
     ...review,
     id: `rev-${Date.now()}`,
@@ -315,45 +254,92 @@ export async function addReview(review: Omit<Review, 'id' | 'date'>): Promise<Re
 
   if (supabase) {
     const { error } = await supabase.from('reviews').insert(newReview);
-    // Update product rating if supabase works
+    if (error) {
+      console.error("Error adding review to Supabase:", error);
+      throw error;
+    }
+    
+    // Update product rating average & reviews count
+    const { data: prodReviews, error: revError } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('productId', review.productId);
+
+    if (!revError && prodReviews && prodReviews.length > 0) {
+      const avg = prodReviews.reduce((sum, r) => sum + r.rating, 0) / prodReviews.length;
+      await supabase
+        .from('products')
+        .update({ 
+          rating: parseFloat(avg.toFixed(1)), 
+          reviewsCount: prodReviews.length 
+        })
+        .eq('id', review.productId);
+    }
+    return newReview;
   }
 
+  // Fallback
   localReviews.unshift(newReview);
-  saveStateToStorage('good_style_reviews', localReviews);
-
-  // Recalculate average rating for product locally
   const pId = review.productId;
   const prodReviews = localReviews.filter(r => r.productId === pId);
   const avg = prodReviews.reduce((sum, r) => sum + r.rating, 0) / prodReviews.length;
-  
   const prodIndex = localProducts.findIndex(p => p.id === pId);
   if (prodIndex >= 0) {
     localProducts[prodIndex].rating = parseFloat(avg.toFixed(1));
     localProducts[prodIndex].reviewsCount = prodReviews.length;
-    saveStateToStorage('good_style_products', localProducts);
   }
-
   return newReview;
 }
 
 export async function getOrders(): Promise<Order[]> {
-  initializeLocalStorage();
   if (supabase) {
     const { data, error } = await supabase.from('orders').select('*').order('createdAt', { ascending: false });
-    if (!error && data) return data;
+    if (error) {
+      console.error("Error getting orders from Supabase:", error);
+      throw error;
+    }
+    return data || [];
   }
   return localOrders;
 }
 
 export async function addOrder(order: Omit<Order, 'id' | 'createdAt'>): Promise<Order> {
-  initializeLocalStorage();
   const newOrder: Order = {
     ...order,
     id: `GST-ORD-${Date.now().toString().slice(-6)}`,
     createdAt: new Date().toISOString()
   };
 
-  // Adjust stock based on ordered quantities
+  if (supabase) {
+    const { error } = await supabase.from('orders').insert(newOrder);
+    if (error) {
+      console.error("Error adding order to Supabase:", error);
+      throw error;
+    }
+
+    // Decrement stock in Supabase for each ordered item size
+    for (const item of order.items) {
+      const { data: prod, error: getError } = await supabase
+        .from('products')
+        .select('stock')
+        .eq('id', item.productId)
+        .maybeSingle();
+
+      if (!getError && prod && prod.stock) {
+        const stockRecord = typeof prod.stock === 'string' ? JSON.parse(prod.stock) : prod.stock;
+        if (stockRecord && stockRecord[item.size] !== undefined) {
+          stockRecord[item.size] = Math.max(0, stockRecord[item.size] - item.quantity);
+          await supabase
+            .from('products')
+            .update({ stock: stockRecord })
+            .eq('id', item.productId);
+        }
+      }
+    }
+    return newOrder;
+  }
+
+  // Fallback
   for (const item of order.items) {
     const prodIndex = localProducts.findIndex(p => p.id === item.productId);
     if (prodIndex >= 0) {
@@ -363,70 +349,132 @@ export async function addOrder(order: Omit<Order, 'id' | 'createdAt'>): Promise<
       }
     }
   }
-  saveStateToStorage('good_style_products', localProducts);
-
-  if (supabase) {
-    const { error } = await supabase.from('orders').insert(newOrder);
-    // Suppress errors to ensure the checkout proceeds via local storage if database fails
-  }
-
   localOrders.unshift(newOrder);
-  saveStateToStorage('good_style_orders', localOrders);
   return newOrder;
 }
 
 export async function getCoupons(): Promise<Coupon[]> {
-  initializeLocalStorage();
   if (supabase) {
     const { data, error } = await supabase.from('coupons').select('*');
-    if (!error && data) return data;
+    if (error) {
+      console.error("Error getting coupons from Supabase:", error);
+      throw error;
+    }
+    return data || [];
   }
   return localCoupons;
 }
 
 export async function saveCoupon(coupon: Coupon): Promise<Coupon> {
-  initializeLocalStorage();
-  const index = localCoupons.findIndex(c => c.code.toUpperCase() === coupon.code.toUpperCase());
   if (supabase) {
-    await supabase.from('coupons').upsert(coupon);
+    const { error } = await supabase.from('coupons').upsert(coupon);
+    if (error) {
+      console.error("Error saving coupon to Supabase:", error);
+      throw error;
+    }
+    return coupon;
   }
+  const index = localCoupons.findIndex(c => c.code.toUpperCase() === coupon.code.toUpperCase());
   if (index >= 0) {
     localCoupons[index] = coupon;
   } else {
     localCoupons.push(coupon);
   }
-  saveStateToStorage('good_style_coupons', localCoupons);
   return coupon;
 }
 
 export async function deleteCoupon(code: string): Promise<boolean> {
-  initializeLocalStorage();
   if (supabase) {
     const { error } = await supabase.from('coupons').delete().eq('code', code);
-    if (!error) return true;
+    if (error) {
+      console.error("Error deleting coupon from Supabase:", error);
+      throw error;
+    }
+    return true;
   }
   const index = localCoupons.findIndex(c => c.code.toUpperCase() === code.toUpperCase());
   if (index >= 0) {
     localCoupons.splice(index, 1);
-    saveStateToStorage('good_style_coupons', localCoupons);
     return true;
   }
   return false;
 }
 
+// --- SETTINGS AND VISITS MANAGEMENT ---
+
+export async function getSettings(): Promise<Record<string, any>> {
+  if (supabase) {
+    const { data, error } = await supabase.from('settings').select('*');
+    if (!error && data) {
+      const settingsMap: Record<string, any> = {};
+      data.forEach((row: any) => {
+        settingsMap[row.key] = row.value;
+      });
+      return settingsMap;
+    }
+  }
+  return {};
+}
+
+export async function saveSetting(key: string, value: any): Promise<void> {
+  if (supabase) {
+    const { error } = await supabase.from('settings').upsert({ key, value });
+    if (error) {
+      console.error("Error saving setting to Supabase:", error);
+      throw error;
+    }
+  }
+}
+
 export async function getVisits(): Promise<{ date: string; count: number }[]> {
-  initializeLocalStorage();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'visits_data')
+      .maybeSingle();
+    if (!error && data && data.value) {
+      return data.value;
+    }
+  }
   return localVisits;
 }
 
 export async function recordVisit(): Promise<void> {
-  initializeLocalStorage();
   const todayStr = new Date().toISOString().split('T')[0];
+  
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'visits_data')
+      .maybeSingle();
+    
+    let visits = [];
+    if (!error && data && data.value) {
+      visits = data.value;
+    } else {
+      initializeFallbackData();
+      visits = [...localVisits];
+    }
+    
+    const visitIndex = visits.findIndex((v: any) => v.date === todayStr);
+    if (visitIndex >= 0) {
+      visits[visitIndex].count += 1;
+    } else {
+      visits.push({ date: todayStr, count: 1 });
+    }
+    
+    await supabase.from('settings').upsert({ key: 'visits_data', value: visits });
+    return;
+  }
+
+  // Fallback
+  initializeFallbackData();
   const visitIndex = localVisits.findIndex(v => v.date === todayStr);
   if (visitIndex >= 0) {
     localVisits[visitIndex].count += 1;
   } else {
     localVisits.push({ date: todayStr, count: 1 });
   }
-  saveStateToStorage('good_style_visits', localVisits);
 }
