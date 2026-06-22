@@ -15,6 +15,34 @@ export default function HomePage() {
   const { addToCart } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
 
+  const [activeReviewIndex, setActiveReviewIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Swipe logic
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    if (isLeftSwipe) {
+      setActiveReviewIndex((prev) => (prev + 1) % featuredReviews.length);
+    } else if (isRightSwipe) {
+      setActiveReviewIndex((prev) => (prev - 1 + featuredReviews.length) % featuredReviews.length);
+    }
+  };
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -39,6 +67,37 @@ export default function HomePage() {
     loadData();
   }, []);
 
+  // Auto-scroll testimonials carousel
+  useEffect(() => {
+    if (featuredReviews.length === 0) return;
+    const interval = setInterval(() => {
+      setActiveReviewIndex((prev) => (prev + 1) % featuredReviews.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [featuredReviews]);
+
+  // Scroll Reveal Observer
+  useEffect(() => {
+    if (loading) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('active');
+          }
+        });
+      },
+      { threshold: 0.05 }
+    );
+
+    const elements = document.querySelectorAll('.scroll-reveal');
+    elements.forEach((el) => observer.observe(el));
+
+    return () => {
+      elements.forEach((el) => observer.unobserve(el));
+    };
+  }, [loading]);
+
   return (
     <div style={{ backgroundColor: '#FFFFFF' }}>
       
@@ -54,9 +113,9 @@ export default function HomePage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '60vh'
+        minHeight: '65vh'
       }}>
-        <div className="container" style={{
+        <div className="container fade-in" style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -74,7 +133,8 @@ export default function HomePage() {
             marginBottom: '16px',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
           }}>
             <Sparkles size={14} /> Colección 2026
           </span>
@@ -85,7 +145,8 @@ export default function HomePage() {
             fontWeight: 800,
             letterSpacing: '-0.02em',
             marginBottom: '18px',
-            color: '#FFFFFF'
+            color: '#FFFFFF',
+            textShadow: '0 2px 10px rgba(0,0,0,0.5)'
           }}>
             GOOD <span style={{ color: 'var(--primary-color)' }}>STYLE</span>
           </h1>
@@ -94,7 +155,8 @@ export default function HomePage() {
             fontSize: '1.3rem',
             fontWeight: 500,
             color: '#EAEAEA',
-            marginBottom: '12px'
+            marginBottom: '12px',
+            textShadow: '0 2px 6px rgba(0,0,0,0.4)'
           }}>
             Calidad y estilo al mejor precio.
           </h2>
@@ -103,7 +165,8 @@ export default function HomePage() {
             color: '#CCCCCC',
             maxWidth: '560px',
             lineHeight: '1.6',
-            marginBottom: '36px'
+            marginBottom: '36px',
+            textShadow: '0 1px 4px rgba(0,0,0,0.4)'
           }}>
             Streetwear, jeans, prendas oversize y accesorios seleccionados para destacar con identidad propia en la escena urbana argentina.
           </p>
@@ -114,14 +177,14 @@ export default function HomePage() {
             justifyContent: 'center',
             width: '100%'
           }}>
-            <Link href="/catalog" className="btn-primary" style={{ padding: '16px 36px', backgroundColor: 'var(--primary-color)', borderColor: 'var(--primary-color)' }}>
+            <Link href="/catalog" className="btn-primary transition-all-premium" style={{ padding: '16px 36px', backgroundColor: 'var(--primary-color)', borderColor: 'var(--primary-color)' }}>
               Ver colección <ArrowRight size={16} style={{ marginLeft: 8 }} />
             </Link>
             <a 
               href="https://wa.me/5493786411223?text=Hola%20Good%20Style!%20Quiero%20conocer%20los%20nuevos%20ingresos."
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-outline" 
+              className="btn-outline transition-all-premium" 
               style={{ 
                 padding: '16px 36px',
                 borderColor: '#FFFFFF',
@@ -136,7 +199,7 @@ export default function HomePage() {
       </section>
 
       {/* CATEGORIES SECTION */}
-      <section style={{ padding: '80px 0', backgroundColor: '#FFFFFF' }}>
+      <section className="scroll-reveal" style={{ padding: '80px 0', backgroundColor: '#FFFFFF' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <h2 style={{ fontSize: '1.8rem', textTransform: 'uppercase', marginBottom: '10px' }}>Categorías Principales</h2>
@@ -151,13 +214,14 @@ export default function HomePage() {
             {[
               { name: 'Jeans', slug: 'jeans', img: '/JEAN/baggy-azul-clasico.jpeg' },
               { name: 'Remeras', slug: 'remeras', img: '/REMERAS/boxy-2023.jpeg' },
-              { name: 'Buzos', slug: 'buzos', img: '/BUZOS/oversize-washed-negro.jpeg' },
-              { name: 'Accesorios', slug: 'gorras', img: '/GORRAS/trucker-toxic-negra.jpeg' },
+              { name: 'Buzos', slug: 'buzos', img: '/BUZOS/buzo-over-myself.jpeg' },
+              { name: 'Accesorios', slug: 'gorras', img: '/GORRAS/gorra-boston.jpeg' },
               { name: 'Perfumes', slug: 'perfumes', img: '/PERFUMES/aimen-100-ml.jpeg' }
             ].map((cat) => (
               <Link 
                 href={`/catalog?category=${cat.slug}`} 
                 key={cat.slug}
+                className="category-card"
                 style={{
                   position: 'relative',
                   height: '350px',
@@ -179,6 +243,7 @@ export default function HomePage() {
                 <img 
                   src={cat.img} 
                   alt={cat.name} 
+                  loading="lazy"
                   style={{
                     position: 'absolute',
                     width: '100%',
@@ -242,7 +307,7 @@ export default function HomePage() {
       </section>
 
       {/* BEST SELLERS SECTION */}
-      <section style={{ padding: '80px 0', backgroundColor: '#F8F8F8', borderTop: '1px solid #EAEAEA', borderBottom: '1px solid #EAEAEA' }}>
+      <section className="scroll-reveal" style={{ padding: '80px 0', backgroundColor: '#F8F8F8', borderTop: '1px solid #EAEAEA', borderBottom: '1px solid #EAEAEA' }}>
         <div className="container">
           <div style={{
             display: 'flex',
@@ -275,7 +340,9 @@ export default function HomePage() {
               gap: '16px',
             }} className="product-grid">
               {bestSellers.map((product) => (
-                <ProductCard key={product.id} product={product} isFavorite={isFavorite(product.id)} toggleFav={() => toggleFavorite(product.id)} />
+                <div key={product.id} className="product-card-hover" style={{ height: '100%' }}>
+                  <ProductCard product={product} isFavorite={isFavorite(product.id)} toggleFav={() => toggleFavorite(product.id)} />
+                </div>
               ))}
             </div>
           )}
@@ -283,7 +350,7 @@ export default function HomePage() {
       </section>
 
       {/* NEW ARRIVALS SECTION */}
-      <section style={{ padding: '80px 0', backgroundColor: '#FFFFFF' }}>
+      <section className="scroll-reveal" style={{ padding: '80px 0', backgroundColor: '#FFFFFF' }}>
         <div className="container">
           <div style={{
             display: 'flex',
@@ -316,7 +383,9 @@ export default function HomePage() {
               gap: '16px',
             }} className="product-grid">
               {newArrivals.map((product) => (
-                <ProductCard key={product.id} product={product} isFavorite={isFavorite(product.id)} toggleFav={() => toggleFavorite(product.id)} />
+                <div key={product.id} className="product-card-hover" style={{ height: '100%' }}>
+                  <ProductCard product={product} isFavorite={isFavorite(product.id)} toggleFav={() => toggleFavorite(product.id)} />
+                </div>
               ))}
             </div>
           )}
@@ -324,46 +393,93 @@ export default function HomePage() {
       </section>
 
       {/* CUSTOMER REVIEWS */}
-      <section style={{ padding: '80px 0', backgroundColor: '#F8F8F8', borderTop: '1px solid #EAEAEA' }}>
-        <div className="container">
+      <section className="scroll-reveal" style={{ padding: '80px 0', backgroundColor: '#F8F8F8', borderTop: '1px solid #EAEAEA', overflow: 'hidden' }}>
+        <div className="container" style={{ maxWidth: '800px' }}>
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <h2 style={{ fontSize: '1.8rem', textTransform: 'uppercase', marginBottom: '10px' }}>Opiniones de Clientes</h2>
             <p style={{ fontSize: '0.9rem', color: '#666666' }}>Lo que opinan quienes visten Good Style</p>
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '24px'
-          }}>
-            {featuredReviews.map((rev) => (
-              <div key={rev.id} style={{
-                backgroundColor: '#FFFFFF',
-                padding: '30px',
-                border: '1px solid #EAEAEA',
-                position: 'relative'
-              }}>
-                <div style={{ display: 'flex', gap: '4px', marginBottom: '14px' }}>
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={16} fill={i < rev.rating ? "#FFD700" : "none"} color={i < rev.rating ? "#FFD700" : "#CCCCCC"} />
-                  ))}
-                </div>
-                <p style={{
-                  fontSize: '0.9rem',
-                  fontStyle: 'italic',
-                  color: '#444444',
-                  lineHeight: '1.6',
-                  marginBottom: '20px'
+          <div 
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            style={{
+              position: 'relative',
+              width: '100%',
+              overflow: 'hidden'
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              transition: 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+              transform: `translateX(-${activeReviewIndex * 100}%)`,
+              width: `${featuredReviews.length * 100}%`
+            }}>
+              {featuredReviews.map((rev) => (
+                <div key={rev.id} style={{
+                  width: `${100 / featuredReviews.length}%`,
+                  padding: '10px',
+                  boxSizing: 'border-box',
+                  flexShrink: 0
                 }}>
-                  "{rev.comment}"
-                </p>
-                <div>
-                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111111' }}>{rev.author}</h4>
-                  <span style={{ fontSize: '0.75rem', color: '#888888' }}>{rev.location} {rev.verified && '• Compra Verificada'}</span>
+                  <div style={{
+                    backgroundColor: '#FFFFFF',
+                    padding: '40px 30px',
+                    border: '1px solid #EAEAEA',
+                    position: 'relative',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.02)',
+                    minHeight: '220px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between'
+                  }}>
+                    <div>
+                      <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} size={16} fill={i < rev.rating ? "#FFD700" : "none"} color={i < rev.rating ? "#FFD700" : "#CCCCCC"} />
+                        ))}
+                      </div>
+                      <p style={{
+                        fontSize: '1rem',
+                        fontStyle: 'italic',
+                        color: '#333333',
+                        lineHeight: '1.7',
+                        marginBottom: '24px'
+                      }}>
+                        "{rev.comment}"
+                      </p>
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#111111' }}>{rev.author}</h4>
+                      <span style={{ fontSize: '0.78rem', color: '#888888' }}>{rev.location} {rev.verified && '• Compra Verificada'}</span>
+                    </div>
+                    <MessageSquare size={32} color="#F0F0F0" style={{ position: 'absolute', bottom: '30px', right: '30px', zIndex: 0 }} />
+                  </div>
                 </div>
-                <MessageSquare size={24} color="#EAEAEA" style={{ position: 'absolute', bottom: '30px', right: '30px' }} />
-              </div>
-            ))}
+              ))}
+            </div>
+
+            {/* Carousel navigation dots */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '24px' }}>
+              {featuredReviews.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveReviewIndex(idx)}
+                  style={{
+                    width: activeReviewIndex === idx ? '24px' : '8px',
+                    height: '8px',
+                    borderRadius: '4px',
+                    backgroundColor: activeReviewIndex === idx ? 'var(--primary-color)' : '#CCCCCC',
+                    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                    padding: 0,
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                  aria-label={`Ir a reseña ${idx + 1}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>

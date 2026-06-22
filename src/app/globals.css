@@ -349,3 +349,81 @@ button {
     padding: 16px !important;
   }
 }
+
+/* --- PREMIUM STREETWEAR UPGRADES & ANIMATIONS --- */
+
+/* Scroll reveal helper classes */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-reveal.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Card lift and shadow hover effect */
+.product-card-hover {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.product-card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+  border-color: #CCCCCC !important;
+}
+
+/* Interactive elements transitions */
+.transition-all-premium {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Smooth input styling */
+.input-premium {
+  border: 1px solid var(--border-color);
+  padding: 12px 16px;
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.25s ease, background-color 0.25s ease;
+}
+
+.input-premium:focus {
+  border-color: var(--primary-color);
+  background-color: #FFFFFF;
+}
+
+/* Category cards hover effect */
+.category-card {
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.category-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* Auth Pages form wrapper */
+.auth-form-card {
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-color);
+  padding: 40px;
+  max-width: 450px;
+  width: 100%;
+  margin: 0 auto;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.03);
+}
+
+@media (max-width: 480px) {
+  .auth-form-card {
+    padding: 24px;
+    border: none;
+    box-shadow: none;
+  }
+}

@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { CartProvider } from '@/context/CartContext';
 import { FavoritesProvider } from '@/context/FavoritesContext';
+import { AuthProvider } from '@/context/AuthContext';
 import { recordVisit } from '@/lib/db';
 
 export const Providers: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -12,11 +13,13 @@ export const Providers: React.FC<{ children: React.ReactNode }> = ({ children })
   }, []);
 
   return (
-    <CartProvider>
-      <FavoritesProvider>
-        {children}
-      </FavoritesProvider>
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <FavoritesProvider>
+          {children}
+        </FavoritesProvider>
+      </CartProvider>
+    </AuthProvider>
   );
 };
 export default Providers;
