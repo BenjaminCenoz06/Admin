@@ -413,7 +413,7 @@ export default function HomePage() {
             <div style={{
               display: 'flex',
               transition: 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-              transform: `translateX(-${activeReviewIndex * 100}%)`,
+              transform: `translateX(-${featuredReviews.length > 0 ? (activeReviewIndex * 100) / featuredReviews.length : 0}%)`,
               width: `${featuredReviews.length * 100}%`
             }}>
               {featuredReviews.map((rev) => (

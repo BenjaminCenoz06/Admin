@@ -26,10 +26,18 @@ function LoginContent() {
     }
   }, [user, loading, router]);
 
-  // Check if reset was successful from URL params
+  // Check if reset was successful or a specific mode was requested from URL params
   useEffect(() => {
     if (searchParams.get('reset') === 'true') {
       setSuccessMsg('Tu contraseña ha sido restablecida. Por favor, inicia sesión con tu nueva contraseña.');
+    }
+    const paramMode = searchParams.get('mode');
+    if (paramMode === 'register') {
+      setMode('register');
+    } else if (paramMode === 'forgot') {
+      setMode('forgot');
+    } else if (paramMode === 'login') {
+      setMode('login');
     }
   }, [searchParams]);
 
@@ -96,7 +104,7 @@ function LoginContent() {
       <div className="container" style={{ display: 'flex', justifyContent: 'center' }}>
         <div className="auth-form-card fade-in">
           {/* Logo Brand Header */}
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
             <span style={{
               fontFamily: 'var(--font-display)',
               fontSize: '1.8rem',
@@ -111,6 +119,59 @@ function LoginContent() {
               Autenticación
             </p>
           </div>
+
+          {/* Form Selector Tabs */}
+          {mode !== 'forgot' && (
+            <div style={{
+              display: 'flex',
+              borderBottom: '2px solid #F0F0F0',
+              marginBottom: '24px',
+              gap: '8px'
+            }}>
+              <button
+                type="button"
+                onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }}
+                style={{
+                  flex: 1,
+                  padding: '12px 8px',
+                  fontSize: '0.9rem',
+                  fontWeight: mode === 'login' ? 700 : 500,
+                  color: mode === 'login' ? 'var(--primary-color)' : '#666666',
+                  borderBottom: mode === 'login' ? '2px solid var(--primary-color)' : '2px solid transparent',
+                  marginBottom: '-2px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}
+              >
+                Iniciar Sesión
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode('register'); setErrorMsg(''); setSuccessMsg(''); }}
+                style={{
+                  flex: 1,
+                  padding: '12px 8px',
+                  fontSize: '0.9rem',
+                  fontWeight: mode === 'register' ? 700 : 500,
+                  color: mode === 'register' ? 'var(--primary-color)' : '#666666',
+                  borderBottom: mode === 'register' ? '2px solid var(--primary-color)' : '2px solid transparent',
+                  marginBottom: '-2px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}
+              >
+                Crear Cuenta
+              </button>
+            </div>
+          )}
 
           <h2 style={{ fontSize: '1.25rem', textTransform: 'uppercase', marginBottom: '20px', textAlign: 'center' }}>
             {mode === 'login' && 'Iniciar Sesión'}

@@ -273,16 +273,25 @@ export async function deleteProduct(id: string): Promise<boolean> {
 
 export async function getReviews(productId?: string): Promise<Review[]> {
   if (supabase) {
-    let query = supabase.from('reviews').select('*');
-    if (productId) {
-      query = query.eq('productId', productId);
+    try {
+      let query = supabase.from('reviews').select('*');
+      if (productId) {
+        query = query.eq('productId', productId);
+      }
+      const { data, error } = await query;
+      if (error) {
+        console.error("Error getting reviews from Supabase, falling back to local:", error);
+        return productId ? localReviews.filter(r => r.productId === productId) : localReviews;
+      }
+      if (data && data.length > 0) {
+        return data;
+      }
+      // If table is empty, fall back to local seed reviews
+      return productId ? localReviews.filter(r => r.productId === productId) : localReviews;
+    } catch (err) {
+      console.error("Exception fetching reviews, falling back to local:", err);
+      return productId ? localReviews.filter(r => r.productId === productId) : localReviews;
     }
-    const { data, error } = await query;
-    if (error) {
-      console.error("Error getting reviews from Supabase:", error);
-      throw error;
-    }
-    return data || [];
   }
   if (productId) {
     return localReviews.filter(r => r.productId === productId);
