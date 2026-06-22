@@ -28,7 +28,8 @@ import {
   Check, 
   Tag, 
   TrendingDown, 
-  RefreshCw 
+  RefreshCw,
+  Search
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
@@ -39,6 +40,7 @@ export default function AdminDashboard() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [visitsData, setVisitsData] = useState<{ date: string; count: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [adminSearchQuery, setAdminSearchQuery] = useState('');
 
   // Product CRUD Form States
   const [isEditingProduct, setIsEditingProduct] = useState(false);
@@ -105,6 +107,19 @@ export default function AdminDashboard() {
   const outOfStockProducts = products.filter(p => {
     const totalStock = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
     return totalStock === 0;
+  });
+
+  // Filter products by adminSearchQuery
+  const filteredProducts = products.filter(p => {
+    const q = adminSearchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      p.name.toLowerCase().includes(q) ||
+      (p.sku && p.sku.toLowerCase().includes(q)) ||
+      p.category.toLowerCase().includes(q) ||
+      (p.categoryDisplay && p.categoryDisplay.toLowerCase().includes(q)) ||
+      p.sizes.some(size => size.toLowerCase().includes(q))
+    );
   });
 
   // --- PRODUCT CRUD HANDLERS ---
@@ -592,9 +607,60 @@ export default function AdminDashboard() {
               ) : (
                 /* PRODUCTS LISTING TABLE */
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <h3 style={{ fontSize: '1rem', textTransform: 'uppercase' }}>Listado de Prendas</h3>
-                    <button onClick={openNewProductForm} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 18px', fontSize: '0.8rem' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    marginBottom: '24px',
+                    gap: '16px',
+                    flexWrap: 'wrap'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexGrow: 1, flexWrap: 'wrap' }}>
+                      <h3 style={{ fontSize: '1rem', textTransform: 'uppercase', margin: 0 }}>Listado de Prendas</h3>
+                      <div style={{ position: 'relative', minWidth: '280px', flexGrow: 0.5 }}>
+                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#888888', display: 'flex', alignItems: 'center' }}>
+                          <Search size={16} />
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="Buscar por nombre, SKU, talle o categoría..."
+                          value={adminSearchQuery}
+                          onChange={(e) => setAdminSearchQuery(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px 10px 38px',
+                            fontSize: '0.88rem',
+                            border: '1px solid #EAEAEA',
+                            borderRadius: '4px',
+                            backgroundColor: '#F8F8F8',
+                            outline: 'none',
+                            transition: 'all 0.2s ease',
+                            color: '#111111'
+                          }}
+                        />
+                        {adminSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setAdminSearchQuery('')}
+                            style={{
+                              position: 'absolute',
+                              right: '12px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              color: '#888888',
+                              cursor: 'pointer',
+                              fontSize: '0.8rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            Limpiar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <button onClick={openNewProductForm} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 18px', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                       <Plus size={16} /> Nueva Prenda
                     </button>
                   </div>
@@ -612,67 +678,75 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {products.map((p) => {
-                          const totalStock = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
-                          return (
-                            <tr key={p.id} style={{ borderBottom: '1px solid #F5F5F5' }}>
-                              <td style={{ padding: '14px', fontWeight: 600, color: '#666666' }}>{p.sku}</td>
-                              <td style={{ padding: '14px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  <div style={{ width: '36px', height: '48px', position: 'relative', border: '1px solid #EAEAEA' }}>
-                                    <img 
-                                      src={p.image.startsWith('/') ? p.image : `/${p.image}`} 
-                                      alt="" 
-                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                      onError={(e) => {
-                                        e.currentTarget.src = 'https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=500';
-                                      }}
-                                    />
+                        {filteredProducts.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ padding: '30px', textAlign: 'center', color: '#888888', fontStyle: 'italic' }}>
+                              No se encontraron prendas que coincidan con la búsqueda.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredProducts.map((p) => {
+                            const totalStock = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
+                            return (
+                              <tr key={p.id} style={{ borderBottom: '1px solid #F5F5F5' }}>
+                                <td style={{ padding: '14px', fontWeight: 600, color: '#666666' }}>{p.sku}</td>
+                                <td style={{ padding: '14px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{ width: '36px', height: '48px', position: 'relative', border: '1px solid #EAEAEA' }}>
+                                      <img 
+                                        src={p.image.startsWith('/') ? p.image : `/${p.image}`} 
+                                        alt="" 
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        onError={(e) => {
+                                          e.currentTarget.src = 'https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=500';
+                                        }}
+                                      />
+                                    </div>
+                                    <span style={{ fontWeight: 700 }}>{p.name}</span>
                                   </div>
-                                  <span style={{ fontWeight: 700 }}>{p.name}</span>
-                                </div>
-                              </td>
-                              <td style={{ padding: '14px', textTransform: 'capitalize' }}>{p.category}</td>
-                              <td style={{ padding: '14px', fontWeight: 700, color: 'var(--primary-color)' }}>
-                                ${p.price.toLocaleString('es-AR')}
-                              </td>
-                              <td style={{ padding: '14px' }}>
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                  {Object.entries(p.stock || {}).map(([sz, stockCount]) => (
-                                    <span 
-                                      key={sz} 
-                                      style={{
-                                        fontSize: '0.75rem',
-                                        padding: '2px 6px',
-                                        backgroundColor: stockCount === 0 ? '#FCE8E6' : '#EAEAEA',
-                                        color: stockCount === 0 ? '#C5221F' : '#333333',
-                                        border: '1px solid #DDDDDD'
-                                      }}
-                                    >
-                                      {sz}: {stockCount}
-                                    </span>
-                                  ))}
-                                  {totalStock === 0 && (
-                                    <span style={{ fontSize: '0.72rem', color: '#C5221F', fontWeight: 700 }}>SIN STOCK TOTAL</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td style={{ padding: '14px' }}>
-                                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                  <button onClick={() => openEditProductForm(p)} title="Editar" style={{ color: '#111111' }}>
-                                    <Edit size={16} />
-                                  </button>
-                                  <button onClick={() => handleDuplicateProduct(p)} title="Duplicar" style={{ color: '#666666' }}>
-                                    <Copy size={16} />
-                                  </button>
-                                  <button onClick={() => handleDeleteProductClick(p.id)} title="Eliminar" style={{ color: '#FF4D4D' }}>
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                                </td>
+                                <td style={{ padding: '14px', textTransform: 'capitalize' }}>{p.category}</td>
+                                <td style={{ padding: '14px', fontWeight: 700, color: 'var(--primary-color)' }}>
+                                  ${p.price.toLocaleString('es-AR')}
+                                </td>
+                                <td style={{ padding: '14px' }}>
+                                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    {Object.entries(p.stock || {}).map(([sz, stockCount]) => (
+                                      <span 
+                                        key={sz} 
+                                        style={{
+                                          fontSize: '0.75rem',
+                                          padding: '2px 6px',
+                                          backgroundColor: stockCount === 0 ? '#FCE8E6' : '#EAEAEA',
+                                          color: stockCount === 0 ? '#C5221F' : '#333333',
+                                          border: '1px solid #DDDDDD'
+                                        }}
+                                      >
+                                        {sz}: {stockCount}
+                                      </span>
+                                    ))}
+                                    {totalStock === 0 && (
+                                      <span style={{ fontSize: '0.72rem', color: '#C5221F', fontWeight: 700 }}>SIN STOCK TOTAL</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td style={{ padding: '14px' }}>
+                                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                    <button onClick={() => openEditProductForm(p)} title="Editar" style={{ color: '#111111' }}>
+                                      <Edit size={16} />
+                                    </button>
+                                    <button onClick={() => handleDuplicateProduct(p)} title="Duplicar" style={{ color: '#666666' }}>
+                                      <Copy size={16} />
+                                    </button>
+                                    <button onClick={() => handleDeleteProductClick(p.id)} title="Eliminar" style={{ color: '#FF4D4D' }}>
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
                       </tbody>
                     </table>
                   </div>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ShoppingBag, Heart, Search, Menu, X, ArrowRight } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useFavorites } from '@/context/FavoritesContext';
+import { getProducts, Product } from '@/lib/db';
 
 const PROMO_MESSAGES = [
   "🚚 Envíos a todo el país",
@@ -19,10 +20,49 @@ export const Header: React.FC = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [scrolled, setScrolled] = useState(false);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [suggestions, setSuggestions] = useState<Product[]>([]);
   
   const { getCartCount } = useCart();
   const { favorites } = useFavorites();
   const router = useRouter();
+
+  // Fetch all products when the search modal is opened
+  useEffect(() => {
+    if (searchOpen) {
+      const fetchProducts = async () => {
+        try {
+          const prods = await getProducts();
+          setAllProducts(prods);
+        } catch (error) {
+          console.error("Error fetching products for search:", error);
+        }
+      };
+      fetchProducts();
+    } else {
+      setSuggestions([]);
+    }
+  }, [searchOpen]);
+
+  // Filter products for suggestion list in real-time
+  useEffect(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) {
+      setSuggestions([]);
+      return;
+    }
+
+    const filtered = allProducts.filter((p) => {
+      return (
+        p.name.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        (p.categoryDisplay && p.categoryDisplay.toLowerCase().includes(q)) ||
+        (p.sku && p.sku.toLowerCase().includes(q))
+      );
+    });
+
+    setSuggestions(filtered.slice(0, 6)); // limit to 6 suggestions
+  }, [searchQuery, allProducts]);
 
   // Rotate promo messages
   useEffect(() => {
@@ -286,19 +326,39 @@ export const Header: React.FC = () => {
           top: 0,
           left: 0,
           width: '100%',
-          height: '150px',
+          height: '100%',
           backgroundColor: '#FFFFFF',
-          borderBottom: '1px solid #EAEAEA',
           zIndex: 999,
           display: 'flex',
-          alignItems: 'center',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.05)'
+          flexDirection: 'column',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
+          overflowY: 'auto',
+          padding: '40px 0'
         }}>
-          <div className="container" style={{ position: 'relative' }}>
+          <div className="container" style={{ position: 'relative', maxWidth: '800px', width: '100%' }}>
+            {/* Close button */}
+            <button 
+              onClick={() => { setSearchOpen(false); setSearchQuery(''); }} 
+              style={{
+                position: 'absolute',
+                top: '-20px',
+                right: '20px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+              aria-label="Cerrar"
+            >
+              <X size={24} color="#111111" />
+            </button>
+
+            {/* Search Input Form */}
             <form onSubmit={handleSearchSubmit} style={{
               display: 'flex',
               alignItems: 'center',
-              width: '100%'
+              width: '100%',
+              marginTop: '20px',
+              position: 'relative'
             }}>
               <input
                 type="text"
@@ -308,27 +368,88 @@ export const Header: React.FC = () => {
                 autoFocus
                 style={{
                   width: '100%',
-                  fontSize: '1.2rem',
+                  fontSize: '1.4rem',
                   padding: '16px 0',
+                  border: 'none',
                   borderBottom: '2px solid #111111',
-                  fontWeight: 500
+                  fontWeight: 500,
+                  outline: 'none',
+                  color: '#111111',
+                  backgroundColor: 'transparent'
                 }}
               />
-              <button type="submit" style={{ marginLeft: '-40px' }} aria-label="Buscar">
+              <button type="submit" style={{ position: 'absolute', right: '0', background: 'none', border: 'none', cursor: 'pointer', padding: '8px' }} aria-label="Buscar">
                 <ArrowRight size={24} color="#111111" />
               </button>
             </form>
-            <button 
-              onClick={() => setSearchOpen(false)} 
-              style={{
-                position: 'absolute',
-                top: '-40px',
-                right: '20px'
-              }}
-              aria-label="Cerrar"
-            >
-              <X size={20} color="#666666" />
-            </button>
+
+            {/* Live Autocomplete Suggestions */}
+            {searchQuery.trim() && (
+              <div style={{ marginTop: '30px' }}>
+                <h4 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#888888', letterSpacing: '0.05em', marginBottom: '16px' }}>
+                  Resultados sugeridos
+                </h4>
+                {suggestions.length === 0 ? (
+                  <p style={{ fontSize: '0.95rem', color: '#666666', fontStyle: 'italic' }}>
+                    No se encontraron prendas que coincidan con "{searchQuery}".
+                  </p>
+                ) : (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr',
+                    gap: '12px'
+                  }}>
+                    {suggestions.map((product) => (
+                      <Link
+                        key={product.id}
+                        href={`/product/${product.id}`}
+                        onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '16px',
+                          padding: '12px',
+                          border: '1px solid #EAEAEA',
+                          textDecoration: 'none',
+                          color: 'inherit',
+                          transition: 'all 0.2s ease',
+                          backgroundColor: '#FFFFFF'
+                        }}
+                      >
+                        <div style={{ width: '48px', height: '64px', position: 'relative', flexShrink: 0, border: '1px solid #EAEAEA' }}>
+                          <img
+                            src={product.image.startsWith('/') ? product.image : `/${product.image}`}
+                            alt={product.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=500';
+                            }}
+                          />
+                        </div>
+                        <div style={{ flexGrow: 1 }}>
+                          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#888888', display: 'block', marginBottom: '2px' }}>
+                            {product.categoryDisplay}
+                          </span>
+                          <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#111111', display: 'block' }}>
+                            {product.name}
+                          </span>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--primary-color)' }}>
+                            ${product.price.toLocaleString('es-AR')}
+                          </span>
+                          {product.originalPrice && (
+                            <span style={{ fontSize: '0.8rem', textDecoration: 'line-through', color: '#999999', display: 'block', marginTop: '2px' }}>
+                              ${product.originalPrice.toLocaleString('es-AR')}
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
