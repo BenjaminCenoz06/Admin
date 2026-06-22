@@ -167,7 +167,7 @@ export default function CartPage() {
                   {/* Photo */}
                   <div style={{ width: '80px', height: '107px', position: 'relative', flexShrink: 0, border: '1px solid #EAEAEA' }}>
                     <img 
-                      src={item.product.image.startsWith('/') ? item.product.image : `/${item.product.image}`}
+                      src={(item.product.image.startsWith('http') || item.product.image.startsWith('data:') || item.product.image.startsWith('/')) ? item.product.image : `/${item.product.image}`}
                       alt={item.product.name} 
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       onError={(e) => {

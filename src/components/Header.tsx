@@ -418,7 +418,7 @@ export const Header: React.FC = () => {
                       >
                         <div style={{ width: '48px', height: '64px', position: 'relative', flexShrink: 0, border: '1px solid #EAEAEA' }}>
                           <img
-                            src={product.image.startsWith('/') ? product.image : `/${product.image}`}
+                            src={(product.image.startsWith('http') || product.image.startsWith('data:') || product.image.startsWith('/')) ? product.image : `/${product.image}`}
                             alt={product.name}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             onError={(e) => {

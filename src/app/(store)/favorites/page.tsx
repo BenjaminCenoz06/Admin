@@ -101,7 +101,7 @@ export default function FavoritesPage() {
 
               <Link href={`/product/${product.id}`} style={{ display: 'block', overflow: 'hidden', position: 'relative', paddingTop: '133%' }}>
                 <img 
-                  src={product.image.startsWith('/') ? product.image : `/${product.image}`}
+                  src={(product.image.startsWith('http') || product.image.startsWith('data:') || product.image.startsWith('/')) ? product.image : `/${product.image}`}
                   alt={product.name}
                   style={{
                     position: 'absolute',

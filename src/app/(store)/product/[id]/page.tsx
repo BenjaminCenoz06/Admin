@@ -198,7 +198,7 @@ export default function ProductDetailPage() {
               border: '1px solid #EAEAEA'
             }}>
               <img 
-                src={product.images[activeImageIndex]?.startsWith('/') ? product.images[activeImageIndex] : `/${product.images[activeImageIndex]}`}
+                src={(product.images[activeImageIndex]?.startsWith('http') || product.images[activeImageIndex]?.startsWith('data:') || product.images[activeImageIndex]?.startsWith('/')) ? product.images[activeImageIndex] : `/${product.images[activeImageIndex]}`}
                 alt={product.name}
                 style={{
                   position: 'absolute',
@@ -247,7 +247,7 @@ export default function ProductDetailPage() {
                     }}
                   >
                     <img 
-                      src={img.startsWith('/') ? img : `/${img}`} 
+                      src={(img.startsWith('http') || img.startsWith('data:') || img.startsWith('/')) ? img : `/${img}`} 
                       alt="" 
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       onError={(e) => {
@@ -632,7 +632,7 @@ function ProductCard({ product, isFavorite, toggleFav }: { product: Product; isF
 
       <Link href={`/product/${product.id}`} style={{ display: 'block', overflow: 'hidden', position: 'relative', paddingTop: '133%' }}>
         <img 
-          src={product.image.startsWith('/') ? product.image : `/${product.image}`}
+          src={(product.image.startsWith('http') || product.image.startsWith('data:') || product.image.startsWith('/')) ? product.image : `/${product.image}`}
           alt={product.name}
           style={{
             position: 'absolute',

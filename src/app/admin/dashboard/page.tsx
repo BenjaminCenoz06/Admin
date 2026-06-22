@@ -828,7 +828,7 @@ export default function AdminDashboard() {
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <div style={{ width: '36px', height: '48px', position: 'relative', border: '1px solid #EAEAEA' }}>
                                       <img 
-                                        src={p.image.startsWith('/') ? p.image : `/${p.image}`} 
+                                        src={(p.image.startsWith('http') || p.image.startsWith('data:') || p.image.startsWith('/')) ? p.image : `/${p.image}`} 
                                         alt="" 
                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                         onError={(e) => {
