@@ -214,8 +214,8 @@ export default function HomePage() {
             {[
               { name: 'Jeans', slug: 'jeans', img: '/JEAN/baggy-azul-clasico.jpeg' },
               { name: 'Remeras', slug: 'remeras', img: '/REMERAS/boxy-2023.jpeg' },
-              { name: 'Buzos', slug: 'buzos', img: '/BUZOS/buzo-over-myself.jpeg' },
-              { name: 'Accesorios', slug: 'gorras', img: '/GORRAS/gorra-boston.jpeg' },
+              { name: 'Buzos', slug: 'buzos', img: '/buzo-over-myself.jpeg' },
+              { name: 'Accesorios', slug: 'gorras', img: '/gorra-boston.jpeg' },
               { name: 'Perfumes', slug: 'perfumes', img: '/PERFUMES/aimen-100-ml.jpeg' }
             ].map((cat) => (
               <Link 

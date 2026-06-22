@@ -221,6 +221,26 @@ export const Header: React.FC = () => {
               <User size={21} color={user ? "var(--primary-color)" : "#111111"} />
             </Link>
 
+            {!user && (
+              <Link 
+                href="/login?mode=register" 
+                style={{ 
+                  fontSize: '0.78rem', 
+                  fontWeight: 700, 
+                  color: '#111111', 
+                  textTransform: 'uppercase', 
+                  letterSpacing: '0.05em',
+                  border: '1.5px solid #111111', 
+                  padding: '6px 12px',
+                  textDecoration: 'none',
+                  transition: 'all 0.2s ease'
+                }}
+                className="desktop-only"
+              >
+                Crear Cuenta
+              </Link>
+            )}
+
             {/* Shopping Bag / Cart */}
             <Link href="/cart" style={{ position: 'relative', display: 'flex', padding: 8 }} aria-label="Carrito">
               <ShoppingBag size={21} color="#111111" />
@@ -326,6 +346,11 @@ export const Header: React.FC = () => {
               <Link href={user ? "/profile" : "/login"} onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--primary-color)' }}>
                 {user ? "Mi Cuenta" : "Iniciar Sesión"}
               </Link>
+              {!user && (
+                <Link href="/login?mode=register" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                  Crear Cuenta
+                </Link>
+              )}
               <div style={{ height: '1px', backgroundColor: '#EAEAEA', margin: '8px 0' }} />
               <Link href="/catalog?category=jeans" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '1rem', color: '#555555' }}>Jeans</Link>
               <Link href="/catalog?category=remeras" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '1rem', color: '#555555' }}>Remeras</Link>
