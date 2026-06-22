@@ -56,6 +56,62 @@ export default function AdminDashboard() {
   const [prodFormStock, setProdFormStock] = useState<Record<string, number>>({});
   const [prodFormBadge, setProdFormBadge] = useState('');
   const [prodFormSku, setProdFormSku] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      // 1. Try uploading to Supabase Storage if configured
+      const { supabase } = await import('@/lib/db');
+      if (supabase) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `products/${fileName}`;
+
+        // Attempt upload to 'products' bucket
+        const { data, error } = await supabase.storage
+          .from('products')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
+
+        if (!error && data) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('products')
+            .getPublicUrl(filePath);
+          
+          setProdFormImage(publicUrl);
+          setProdFormImages([publicUrl]);
+          setUploadingImage(false);
+          return;
+        } else {
+          console.warn("Supabase storage upload failed, falling back to Base64", error);
+        }
+      }
+    } catch (err) {
+      console.warn("Storage upload error, falling back to Base64:", err);
+    }
+
+    // 2. Base64 Fallback
+    try {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setProdFormImage(base64String);
+        setProdFormImages([base64String]);
+        setUploadingImage(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Base64 conversion failed:", err);
+      alert("Error al procesar la imagen.");
+      setUploadingImage(false);
+    }
+  };
 
   // Coupon Form States
   const [couponFormCode, setCouponFormCode] = useState('');
@@ -533,15 +589,93 @@ export default function AdminDashboard() {
                     </div>
 
                     <div>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Imagen Principal (Ruta local o URL)</label>
-                      <input 
-                        type="text" 
-                        required 
-                        value={prodFormImage}
-                        onChange={(e) => setProdFormImage(e.target.value)}
-                        placeholder="Ej: JEAN/baggy-black.jpeg"
-                        style={{ width: '100%', padding: '10px 12px', border: '1px solid #EAEAEA' }}
-                      />
+                      <div style={{ border: '1px dashed #CCCCCC', padding: '20px', borderRadius: '4px', backgroundColor: '#F9F9F9', textAlign: 'center' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '10px' }}>Imagen de la Prenda *</label>
+                        
+                        {/* Image Preview */}
+                        {prodFormImage && (
+                          <div style={{ marginBottom: '15px', display: 'inline-block', position: 'relative' }}>
+                            <img 
+                              src={prodFormImage} 
+                              alt="Vista previa" 
+                              style={{ maxWidth: '120px', maxHeight: '160px', objectFit: 'cover', border: '1px solid #EAEAEA', borderRadius: '4px' }}
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=500';
+                              }}
+                            />
+                            <button 
+                              type="button" 
+                              onClick={() => { setProdFormImage(''); setProdFormImages([]); }}
+                              style={{
+                                position: 'absolute',
+                                top: '-8px',
+                                right: '-8px',
+                                backgroundColor: '#FF4D4D',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '20px',
+                                height: '20px',
+                                fontSize: '0.7rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 700
+                              }}
+                              title="Eliminar imagen"
+                            >
+                              X
+                            </button>
+                          </div>
+                        )}
+
+                        {/* File Upload Input */}
+                        <div style={{ marginBottom: '15px' }}>
+                          <input 
+                            type="file" 
+                            id="file-upload" 
+                            accept="image/*" 
+                            onChange={handleImageUpload}
+                            style={{ display: 'none' }}
+                          />
+                          <label 
+                            htmlFor="file-upload"
+                            style={{
+                              display: 'inline-block',
+                              padding: '10px 20px',
+                              backgroundColor: '#111111',
+                              color: '#FFFFFF',
+                              fontSize: '0.85rem',
+                              fontWeight: 600,
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              transition: 'background-color 0.2s'
+                            }}
+                          >
+                            {uploadingImage ? 'Procesando...' : (prodFormImage ? 'Cambiar Imagen' : 'Seleccionar Imagen del Dispositivo')}
+                          </label>
+                        </div>
+
+                        {/* URL input fallback (collapsible) */}
+                        <details style={{ textAlign: 'left', marginTop: '10px' }}>
+                          <summary style={{ fontSize: '0.75rem', color: '#666666', cursor: 'pointer', outline: 'none' }}>
+                            O ingresar URL/ruta de imagen manualmente
+                          </summary>
+                          <div style={{ marginTop: '8px' }}>
+                            <input 
+                              type="text" 
+                              value={prodFormImage}
+                              onChange={(e) => {
+                                setProdFormImage(e.target.value);
+                                setProdFormImages([e.target.value]);
+                              }}
+                              placeholder="Ej: JEAN/baggy-black.jpeg o URL externa"
+                              style={{ width: '100%', padding: '8px 10px', fontSize: '0.8rem', border: '1px solid #EAEAEA', borderRadius: '4px', color: '#111111' }}
+                            />
+                          </div>
+                        </details>
+                      </div>
                     </div>
 
                     <div>
