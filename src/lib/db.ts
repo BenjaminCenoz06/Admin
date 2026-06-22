@@ -79,22 +79,40 @@ let localOrders: Order[] = [];
 let localCoupons: Coupon[] = [];
 let localVisits: { date: string; count: number }[] = [];
 
+// Helper to safely parse JSON returned as text/string from Supabase
+function parseJsonField(field: any): any {
+  if (typeof field === 'string') {
+    try {
+      return JSON.parse(field);
+    } catch (e) {
+      console.error("Failed to parse JSON field:", field, e);
+      return field;
+    }
+  }
+  return field;
+}
+
 // Helper to normalize product
 function normalizeProduct(raw: any, index: number = 0): Product {
   const category = raw.category || 'jeans';
-  const sizes = raw.sizes || (category === 'jeans' ? ['38', '40', '42', '44', '46'] : ['S', 'M', 'L', 'XL']);
+  
+  // Safe JSON extraction
+  const rawSizes = parseJsonField(raw.sizes);
+  const sizes = Array.isArray(rawSizes) ? rawSizes : (category === 'jeans' ? ['38', '40', '42', '44', '46'] : ['S', 'M', 'L', 'XL']);
   
   let sizeStock: Record<string, number> = {};
-  if (typeof raw.stock === 'object' && raw.stock !== null) {
-    sizeStock = raw.stock;
+  const rawStock = parseJsonField(raw.stock);
+  if (typeof rawStock === 'object' && rawStock !== null) {
+    sizeStock = rawStock;
   } else {
-    const stockVal = typeof raw.stock === 'number' ? raw.stock : 10;
+    const stockVal = typeof rawStock === 'number' ? rawStock : 10;
     sizes.forEach((s: string, idx: number) => {
       sizeStock[s] = idx === 0 ? Math.max(1, stockVal - 2) : Math.max(0, Math.floor(stockVal / sizes.length));
     });
   }
 
   const sku = raw.sku || `GST-${category.slice(0, 3).toUpperCase()}-${String(raw.numericId || index + 1).padStart(3, '0')}`;
+  const rawImages = parseJsonField(raw.images);
 
   return {
     id: raw.id || raw.slug || `product-${index}`,
@@ -105,7 +123,7 @@ function normalizeProduct(raw: any, index: number = 0): Product {
     price: raw.price || 0,
     originalPrice: raw.originalPrice || null,
     image: raw.image || '',
-    images: Array.isArray(raw.images) && raw.images.length > 0 ? raw.images : [raw.image || ''],
+    images: Array.isArray(rawImages) && rawImages.length > 0 ? rawImages : [raw.image || ''],
     sizes: sizes,
     stock: sizeStock,
     rating: raw.rating || 5,
@@ -165,7 +183,13 @@ export async function getProducts(): Promise<Product[]> {
       console.error("Error fetching products from Supabase:", error);
       throw error;
     }
-    return data || [];
+    return (data || []).map(p => ({
+      ...p,
+      images: parseJsonField(p.images),
+      sizes: parseJsonField(p.sizes),
+      stock: parseJsonField(p.stock),
+      features: parseJsonField(p.features)
+    }));
   }
   return localProducts;
 }
@@ -177,21 +201,42 @@ export async function getProductById(id: string): Promise<Product | null> {
       console.error("Error fetching product by ID from Supabase:", error);
       throw error;
     }
-    return data;
+    if (data) {
+      return {
+        ...data,
+        images: parseJsonField(data.images),
+        sizes: parseJsonField(data.sizes),
+        stock: parseJsonField(data.stock),
+        features: parseJsonField(data.features)
+      };
+    }
+    return null;
   }
   const prod = localProducts.find(p => p.id === id || p.slug === id);
   return prod || null;
 }
 
 export async function saveProduct(product: Omit<Product, 'numericId' | 'createdAt'> & { numericId?: number; createdAt?: string }): Promise<Product> {
+  let existingProduct: Product | null = null;
+  if (supabase) {
+    const { data } = await supabase.from('products').select('numericId, createdAt').eq('id', product.id).maybeSingle();
+    if (data) {
+      existingProduct = data as any;
+    }
+  }
+
   const index = localProducts.findIndex(p => p.id === product.id);
+  const finalNumericId = existingProduct?.numericId || product.numericId || (index >= 0 ? localProducts[index].numericId : localProducts.length + 1);
+  const finalCreatedAt = existingProduct?.createdAt || product.createdAt || (index >= 0 ? localProducts[index].createdAt : new Date().toISOString());
+
   const finalProduct: Product = {
     ...normalizeProduct(product, index >= 0 ? index : localProducts.length),
-    numericId: product.numericId || (index >= 0 ? localProducts[index].numericId : localProducts.length + 1),
-    createdAt: product.createdAt || (index >= 0 ? localProducts[index].createdAt : new Date().toISOString())
+    numericId: finalNumericId,
+    createdAt: finalCreatedAt
   };
 
   if (supabase) {
+    // Send arrays/objects directly as JS types for JSONB columns
     const { error } = await supabase.from('products').upsert(finalProduct);
     if (error) {
       console.error("Error saving product to Supabase:", error);
@@ -298,7 +343,10 @@ export async function getOrders(): Promise<Order[]> {
       console.error("Error getting orders from Supabase:", error);
       throw error;
     }
-    return data || [];
+    return (data || []).map(o => ({
+      ...o,
+      items: parseJsonField(o.items)
+    }));
   }
   return localOrders;
 }
@@ -326,7 +374,7 @@ export async function addOrder(order: Omit<Order, 'id' | 'createdAt'>): Promise<
         .maybeSingle();
 
       if (!getError && prod && prod.stock) {
-        const stockRecord = typeof prod.stock === 'string' ? JSON.parse(prod.stock) : prod.stock;
+        const stockRecord = parseJsonField(prod.stock);
         if (stockRecord && stockRecord[item.size] !== undefined) {
           stockRecord[item.size] = Math.max(0, stockRecord[item.size] - item.quantity);
           await supabase
@@ -434,7 +482,7 @@ export async function getVisits(): Promise<{ date: string; count: number }[]> {
       .eq('key', 'visits_data')
       .maybeSingle();
     if (!error && data && data.value) {
-      return data.value;
+      return parseJsonField(data.value);
     }
   }
   return localVisits;
@@ -452,7 +500,7 @@ export async function recordVisit(): Promise<void> {
     
     let visits = [];
     if (!error && data && data.value) {
-      visits = data.value;
+      visits = parseJsonField(data.value);
     } else {
       initializeFallbackData();
       visits = [...localVisits];
